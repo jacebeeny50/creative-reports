@@ -1,0 +1,1339 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Persona Performance Report</title>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['DM Sans', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            dark: {
+              50: '#f8fafc',
+              100: '#f1f5f9',
+              200: '#e2e8f0',
+              300: '#cbd5e1',
+              400: '#94a3b8',
+              500: '#64748b',
+              600: '#475569',
+              700: '#334155',
+              800: '#1e293b',
+              850: '#172033',
+              900: '#0f172a',
+              950: '#020617',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
+      min-height: 100vh;
+    }
+
+    .font-mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .glass-card {
+      background: rgba(30, 41, 59, 0.7);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(148, 163, 184, 0.1);
+    }
+
+    .glow-green {
+      box-shadow: 0 0 20px rgba(52, 211, 153, 0.15);
+    }
+
+    .glow-yellow {
+      box-shadow: 0 0 20px rgba(251, 191, 36, 0.15);
+    }
+
+    .glow-red {
+      box-shadow: 0 0 20px rgba(248, 113, 113, 0.15);
+    }
+
+    .glow-blue {
+      box-shadow: 0 0 20px rgba(79, 143, 247, 0.15);
+    }
+
+    .stat-card {
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .stat-card:hover {
+      transform: translateY(-2px);
+    }
+
+    .distribution-segment {
+      transition: opacity 0.2s ease;
+    }
+
+    .distribution-segment:hover {
+      opacity: 0.85;
+    }
+
+    .persona-card {
+      transition: all 0.3s ease;
+    }
+
+    .persona-card:hover {
+      border-color: rgba(148, 163, 184, 0.3);
+    }
+
+    .expand-content {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.4s ease-out;
+    }
+
+    .expand-content.expanded {
+      max-height: 2000px;
+    }
+
+    .chevron {
+      transition: transform 0.3s ease;
+    }
+
+    .chevron.rotated {
+      transform: rotate(180deg);
+    }
+
+    /* Custom scrollbar */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: rgba(30, 41, 59, 0.5);
+      border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: rgba(148, 163, 184, 0.3);
+      border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(148, 163, 184, 0.5);
+    }
+
+    /* Loading state */
+    .skeleton {
+      background: linear-gradient(90deg, rgba(30, 41, 59, 0.5) 25%, rgba(51, 65, 85, 0.5) 50%, rgba(30, 41, 59, 0.5) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+    }
+
+    @keyframes shimmer {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+  </style>
+</head>
+<body class="text-slate-200 antialiased">
+
+  <div id="app" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+    <!-- Loading State -->
+    <div id="loading" class="flex items-center justify-center min-h-[60vh]">
+      <div class="text-center">
+        <div class="w-16 h-16 border-4 border-slate-700 border-t-blue-500 rounded-full animate-spin mx-auto mb-4"></div>
+        <p class="text-slate-400">Loading report data...</p>
+      </div>
+    </div>
+
+    <!-- Main Content (hidden until loaded) -->
+    <div id="content" class="hidden">
+
+      <!-- Section 1: Header -->
+      <header id="header" class="mb-8">
+        <div class="glass-card rounded-2xl p-6">
+          <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+
+            <!-- Left: Logo + Client Info -->
+            <div class="flex items-center gap-4">
+              <div id="logo-container" class="w-14 h-14 rounded-xl flex items-center justify-center bg-gradient-to-br from-blue-500 to-purple-600 text-white font-bold text-xl">
+                <!-- Logo or initials will be inserted here -->
+              </div>
+              <div>
+                <h1 id="client-name" class="text-2xl font-bold text-white">Loading...</h1>
+                <p class="text-slate-400 text-sm">Persona Performance Report</p>
+              </div>
+            </div>
+
+            <!-- Right: Meta Info -->
+            <div class="flex flex-wrap items-center gap-6 text-sm">
+              <div>
+                <span class="text-slate-500">Date Range</span>
+                <p id="date-range" class="text-white font-medium">—</p>
+              </div>
+              <div>
+                <span class="text-slate-500">Total Ads</span>
+                <p id="total-ads" class="text-white font-medium">—</p>
+              </div>
+              <div>
+                <label class="text-slate-500 block">Ad Account ID</label>
+                <input
+                  type="text"
+                  id="ad-account-input"
+                  class="bg-slate-800/50 border border-slate-700 rounded-lg px-3 py-1.5 text-white font-mono text-sm w-44 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  placeholder="Enter Account ID"
+                >
+              </div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- Section 2: Summary Stats -->
+      <section id="summary-stats" class="mb-8">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+
+          <!-- Total Spend -->
+          <div class="stat-card glass-card rounded-xl p-5 glow-blue">
+            <div class="flex items-start justify-between">
+              <div>
+                <p class="text-slate-400 text-sm mb-1">Total Spend</p>
+                <p id="total-spend" class="text-3xl font-bold text-white">—</p>
+                <p id="spend-subtitle" class="text-slate-500 text-sm mt-1">— ads</p>
+              </div>
+              <div class="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center">
+                <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+              </div>
+            </div>
+          </div>
+
+          <!-- Total Conversions -->
+          <div class="stat-card glass-card rounded-xl p-5 glow-green">
+            <div class="flex items-start justify-between">
+              <div>
+                <p class="text-slate-400 text-sm mb-1">Total Conversions</p>
+                <p id="total-conversions" class="text-3xl font-bold text-white">—</p>
+                <p id="conversions-subtitle" class="text-slate-500 text-sm mt-1">— clicks</p>
+              </div>
+              <div class="w-10 h-10 rounded-lg bg-green-500/20 flex items-center justify-center">
+                <svg class="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+              </div>
+            </div>
+          </div>
+
+          <!-- Blended CPA -->
+          <div id="cpa-card" class="stat-card glass-card rounded-xl p-5">
+            <div class="flex items-start justify-between">
+              <div>
+                <p class="text-slate-400 text-sm mb-1">Blended CPA</p>
+                <p id="blended-cpa" class="text-3xl font-bold text-white">—</p>
+                <p id="cpa-subtitle" class="text-slate-500 text-sm mt-1">spend / conversions</p>
+              </div>
+              <div id="cpa-icon" class="w-10 h-10 rounded-lg bg-slate-500/20 flex items-center justify-center">
+                <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                </svg>
+              </div>
+            </div>
+          </div>
+
+          <!-- Blended CTR -->
+          <div class="stat-card glass-card rounded-xl p-5 glow-blue">
+            <div class="flex items-start justify-between">
+              <div>
+                <p class="text-slate-400 text-sm mb-1">Blended CTR</p>
+                <p id="blended-ctr" class="text-3xl font-bold text-white">—</p>
+                <p id="ctr-subtitle" class="text-slate-500 text-sm mt-1">— impressions</p>
+              </div>
+              <div class="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center">
+                <svg class="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"></path>
+                </svg>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- Section 3: Distribution Overview -->
+      <section id="distribution-section" class="mb-8">
+        <div class="glass-card rounded-xl p-6">
+          <h2 class="text-lg font-semibold text-white mb-4">Spend Distribution by Persona</h2>
+
+          <!-- Distribution Bar -->
+          <div id="distribution-bar" class="h-10 rounded-lg overflow-hidden flex mb-4">
+            <!-- Segments will be inserted here -->
+          </div>
+
+          <!-- Legend -->
+          <div id="distribution-legend" class="flex flex-wrap gap-4">
+            <!-- Legend items will be inserted here -->
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 4: Persona Deep Dive Cards -->
+      <section id="persona-cards-section" class="mb-8">
+        <h2 class="text-lg font-semibold text-white mb-4">Persona Deep Dive</h2>
+        <div id="persona-cards" class="space-y-4">
+          <!-- Persona cards will be inserted here -->
+        </div>
+      </section>
+
+      <!-- Section 5 & 6: Tabs for Triggers and Themes -->
+      <section id="analysis-tabs-section" class="mb-8">
+        <div class="glass-card rounded-xl overflow-hidden">
+          <!-- Tab Headers -->
+          <div class="flex border-b border-slate-700">
+            <button
+              id="tab-triggers"
+              class="tab-btn flex-1 px-6 py-4 text-sm font-medium text-white bg-slate-800/50 border-b-2 border-blue-500"
+              onclick="switchTab('triggers')"
+            >
+              Trigger Analysis
+            </button>
+            <button
+              id="tab-themes"
+              class="tab-btn flex-1 px-6 py-4 text-sm font-medium text-slate-400 hover:text-white transition-colors"
+              onclick="switchTab('themes')"
+            >
+              Messaging Themes
+            </button>
+          </div>
+
+          <!-- Tab Content -->
+          <div class="p-6">
+            <div id="triggers-content">
+              <div id="triggers-list" class="space-y-3">
+                <!-- Trigger items will be inserted here -->
+              </div>
+            </div>
+            <div id="themes-content" class="hidden">
+              <div id="themes-list" class="space-y-3">
+                <!-- Theme items will be inserted here -->
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Footer -->
+      <footer class="text-center text-slate-500 text-sm py-8">
+        <p>Generated on <span id="generated-date">—</span> | Data source: <span id="data-source">—</span></p>
+      </footer>
+
+    </div>
+  </div>
+
+  <script>
+    // ============================================
+    // CONFIGURATION & DATA
+    // ============================================
+
+    // Data will be loaded dynamically from URL parameter
+    let CONFIG = null;
+    let DATA = null;
+
+    // State
+    let currentAdAccountId = '';
+
+    // ============================================
+    // UTILITY FUNCTIONS
+    // ============================================
+
+    function formatCurrency(value) {
+      if (value >= 1000000) {
+        return '$' + (value / 1000000).toFixed(2) + 'M';
+      } else if (value >= 1000) {
+        return '$' + (value / 1000).toFixed(1) + 'K';
+      }
+      return '$' + value.toFixed(2);
+    }
+
+    function formatNumber(value) {
+      if (value >= 1000000) {
+        return (value / 1000000).toFixed(2) + 'M';
+      } else if (value >= 1000) {
+        return (value / 1000).toFixed(1) + 'K';
+      }
+      return value.toLocaleString();
+    }
+
+    function formatPercent(value) {
+      return (value * 100).toFixed(2) + '%';
+    }
+
+    function parseJsonField(field) {
+      if (typeof field === 'string') {
+        try { return JSON.parse(field); }
+        catch (e) { return []; }
+      }
+      return field || [];
+    }
+
+    function getCpaColor(cpa, thresholds) {
+      if (cpa <= thresholds.good) return { color: '#34d399', class: 'glow-green', bg: 'bg-green-500/20', text: 'text-green-400' };
+      if (cpa <= thresholds.mid) return { color: '#fbbf24', class: 'glow-yellow', bg: 'bg-yellow-500/20', text: 'text-yellow-400' };
+      return { color: '#f87171', class: 'glow-red', bg: 'bg-red-500/20', text: 'text-red-400' };
+    }
+
+    function getPersonaColor(personaName) {
+      const persona = CONFIG.personas.find(p => p.name === personaName);
+      return persona ? persona.color : '#64748b';
+    }
+
+    function getAdsManagerUrl(adId) {
+      return `https://business.facebook.com/adsmanager/manage/ads?act=${currentAdAccountId}&selected_ad_ids=${adId}`;
+    }
+
+    function truncateText(text, maxLength = 40) {
+      if (!text) return '';
+      if (text.length <= maxLength) return text;
+      return text.substring(0, maxLength) + '...';
+    }
+
+    // ============================================
+    // DATA NORMALIZATION
+    // ============================================
+
+    // Normalize ad data to handle both flat and nested structures
+    function normalizeAd(ad) {
+      // Check if data is already in nested format
+      if (ad.metrics && ad.classification) {
+        return ad; // Already normalized
+      }
+
+      // Convert flat structure to nested
+      return {
+        ad_id: String(ad.ad_id),
+        ad_name: ad.ad_name || '',
+        creative_key: String(ad.creative_key || ''),
+        creative_type: ad.creative_type || '',
+        metrics: {
+          spend: ad.spend || 0,
+          cost_per_conversion: ad.cost_per_conversion || 0,
+          cpc: ad.cpc || 0,
+          ctr: ad.ctr || 0,
+          cpm: ad.cpm || 0,
+          frequency: ad.frequency || 0,
+          reach: ad.reach || 0,
+          impressions: ad.impressions || 0,
+          clicks: ad.clicks || 0,
+          conversions: ad.conversions || 0,
+          conversion_rate: ad['conv rate'] || ad.conversion_rate || 0
+        },
+        classification: {
+          primary_persona: ad.primary_persona || 'Unknown',
+          secondary_personas: parseJsonField(ad.secondary_personas),
+          awareness_level: ad.awareness_level || '',
+          category: ad.category || '',
+          hook_type: ad.hook_type || ''
+        },
+        analysis: {
+          visual_matches: parseJsonField(ad.visual_matches),
+          psychology_alignment: parseJsonField(ad.psychology_alignment),
+          triggers_activated: parseJsonField(ad.triggers_activated),
+          messaging_themes: parseJsonField(ad.messaging_themes),
+          strongest_signal: ad.strongest_signal || '',
+          voice_tone_score: typeof ad.voice_tone === 'string' ?
+            (parseJsonField(ad.voice_tone)?.score || 0) :
+            (ad.voice_tone?.score || ad.voice_tone_score || 0),
+          voice_tone_explanation: typeof ad.voice_tone === 'string' ?
+            (parseJsonField(ad.voice_tone)?.explanation || '') :
+            (ad.voice_tone?.explanation || ad.voice_tone_explanation || ''),
+          confidence: ad.confidence || 0
+        }
+      };
+    }
+
+    function normalizeData(data) {
+      // Handle case where data is a raw array of ads (no wrapper)
+      if (Array.isArray(data)) {
+        return {
+          meta: {
+            report_type: "persona_performance",
+            generated_at: new Date().toISOString(),
+            date_range: { start: "—", end: "—" },
+            total_ads: data.length,
+            data_source: "Meta Ads API + AI Analysis"
+          },
+          ads: data.map(normalizeAd)
+        };
+      }
+
+      // Handle wrapped format { meta: {...}, ads: [...] }
+      if (!data || !data.ads) return data;
+      return {
+        ...data,
+        ads: data.ads.map(normalizeAd)
+      };
+    }
+
+    // ============================================
+    // DATA PROCESSING
+    // ============================================
+
+    function calculateSummaryStats(ads) {
+      const totalSpend = ads.reduce((sum, ad) => sum + (ad.metrics?.spend || 0), 0);
+      const totalConversions = ads.reduce((sum, ad) => sum + (ad.metrics?.conversions || 0), 0);
+      const totalClicks = ads.reduce((sum, ad) => sum + (ad.metrics?.clicks || 0), 0);
+      const totalImpressions = ads.reduce((sum, ad) => sum + (ad.metrics?.impressions || 0), 0);
+
+      return {
+        totalSpend,
+        totalConversions,
+        totalClicks,
+        totalImpressions,
+        blendedCpa: totalConversions > 0 ? totalSpend / totalConversions : 0,
+        blendedCtr: totalImpressions > 0 ? totalClicks / totalImpressions : 0
+      };
+    }
+
+    function groupAdsByPersona(ads) {
+      const groups = {};
+
+      ads.forEach(ad => {
+        const persona = ad.classification?.primary_persona || 'Unknown';
+        if (!groups[persona]) {
+          groups[persona] = {
+            name: persona,
+            ads: [],
+            totalSpend: 0,
+            totalConversions: 0,
+            totalClicks: 0,
+            totalImpressions: 0
+          };
+        }
+        groups[persona].ads.push(ad);
+        groups[persona].totalSpend += ad.metrics?.spend || 0;
+        groups[persona].totalConversions += ad.metrics?.conversions || 0;
+        groups[persona].totalClicks += ad.metrics?.clicks || 0;
+        groups[persona].totalImpressions += ad.metrics?.impressions || 0;
+      });
+
+      // Calculate derived metrics for each group
+      Object.values(groups).forEach(group => {
+        group.avgCpa = group.totalConversions > 0 ? group.totalSpend / group.totalConversions : 0;
+        group.avgCtr = group.totalImpressions > 0 ? group.totalClicks / group.totalImpressions : 0;
+      });
+
+      return groups;
+    }
+
+    function extractTriggers(ads) {
+      const triggers = {};
+
+      ads.forEach(ad => {
+        const triggersList = parseJsonField(ad.analysis?.triggers_activated);
+        triggersList.forEach(t => {
+          const name = t.trigger || t;
+          if (!triggers[name]) {
+            triggers[name] = {
+              name,
+              ads: [],
+              totalSpend: 0,
+              totalConversions: 0
+            };
+          }
+          triggers[name].ads.push({
+            ...ad,
+            activationMoment: t.activation_moment || ''
+          });
+          triggers[name].totalSpend += ad.metrics?.spend || 0;
+          triggers[name].totalConversions += ad.metrics?.conversions || 0;
+        });
+      });
+
+      // Calculate avg CPA
+      Object.values(triggers).forEach(t => {
+        t.avgCpa = t.totalConversions > 0 ? t.totalSpend / t.totalConversions : 0;
+      });
+
+      return Object.values(triggers).sort((a, b) => b.totalSpend - a.totalSpend);
+    }
+
+    function extractThemes(ads) {
+      const themes = {};
+
+      ads.forEach(ad => {
+        const themesList = parseJsonField(ad.analysis?.messaging_themes);
+        themesList.forEach(t => {
+          const name = t.theme || t;
+          if (!themes[name]) {
+            themes[name] = {
+              name,
+              ads: [],
+              totalSpend: 0,
+              totalConversions: 0
+            };
+          }
+          themes[name].ads.push({
+            ...ad,
+            exampleInAd: t.example_in_ad || ''
+          });
+          themes[name].totalSpend += ad.metrics?.spend || 0;
+          themes[name].totalConversions += ad.metrics?.conversions || 0;
+        });
+      });
+
+      // Calculate avg CPA
+      Object.values(themes).forEach(t => {
+        t.avgCpa = t.totalConversions > 0 ? t.totalSpend / t.totalConversions : 0;
+      });
+
+      return Object.values(themes).sort((a, b) => b.totalSpend - a.totalSpend);
+    }
+
+    // ============================================
+    // RENDER FUNCTIONS
+    // ============================================
+
+    function renderHeader() {
+      // Logo
+      const logoContainer = document.getElementById('logo-container');
+      if (CONFIG.logo_url) {
+        logoContainer.innerHTML = `<img src="${CONFIG.logo_url}" alt="${CONFIG.client_name}" class="w-full h-full object-contain rounded-xl" onerror="this.parentElement.innerHTML='${CONFIG.client_name.substring(0, 2).toUpperCase()}'">`;
+      } else {
+        logoContainer.textContent = CONFIG.client_name.substring(0, 2).toUpperCase();
+      }
+
+      // Client name
+      document.getElementById('client-name').textContent = CONFIG.client_name;
+
+      // Date range
+      const dateRange = DATA.meta?.date_range;
+      if (dateRange) {
+        document.getElementById('date-range').textContent = `${dateRange.start} to ${dateRange.end}`;
+      }
+
+      // Total ads
+      document.getElementById('total-ads').textContent = DATA.ads.length + ' ads analyzed';
+
+      // Ad account input
+      const adAccountInput = document.getElementById('ad-account-input');
+      currentAdAccountId = CONFIG.ad_account_id || '';
+      adAccountInput.value = currentAdAccountId;
+      adAccountInput.addEventListener('change', (e) => {
+        currentAdAccountId = e.target.value;
+      });
+
+      // Footer
+      document.getElementById('generated-date').textContent = new Date(DATA.meta?.generated_at).toLocaleDateString();
+      document.getElementById('data-source').textContent = DATA.meta?.data_source || 'Unknown';
+    }
+
+    function renderSummaryStats() {
+      const stats = calculateSummaryStats(DATA.ads);
+
+      // Total Spend
+      document.getElementById('total-spend').textContent = formatCurrency(stats.totalSpend);
+      document.getElementById('spend-subtitle').textContent = `${DATA.ads.length} ads`;
+
+      // Total Conversions
+      document.getElementById('total-conversions').textContent = formatNumber(stats.totalConversions);
+      document.getElementById('conversions-subtitle').textContent = `${formatNumber(stats.totalClicks)} clicks`;
+
+      // Blended CPA with color coding
+      const cpaCard = document.getElementById('cpa-card');
+      const cpaValue = document.getElementById('blended-cpa');
+      const cpaIcon = document.getElementById('cpa-icon');
+      const cpaStyle = getCpaColor(stats.blendedCpa, CONFIG.cpa_thresholds);
+
+      cpaValue.textContent = formatCurrency(stats.blendedCpa);
+      cpaCard.classList.add(cpaStyle.class);
+      cpaIcon.classList.remove('bg-slate-500/20');
+      cpaIcon.classList.add(cpaStyle.bg);
+      cpaIcon.querySelector('svg').classList.remove('text-slate-400');
+      cpaIcon.querySelector('svg').classList.add(cpaStyle.text);
+
+      // Blended CTR
+      document.getElementById('blended-ctr').textContent = formatPercent(stats.blendedCtr);
+      document.getElementById('ctr-subtitle').textContent = `${formatNumber(stats.totalImpressions)} impressions`;
+    }
+
+    function renderDistribution() {
+      const groups = groupAdsByPersona(DATA.ads);
+      const totalSpend = Object.values(groups).reduce((sum, g) => sum + g.totalSpend, 0);
+
+      // Sort by spend
+      const sortedGroups = Object.values(groups).sort((a, b) => b.totalSpend - a.totalSpend);
+
+      // Render bar segments
+      const barContainer = document.getElementById('distribution-bar');
+      barContainer.innerHTML = sortedGroups.map(group => {
+        const percent = (group.totalSpend / totalSpend) * 100;
+        const color = getPersonaColor(group.name);
+        return `
+          <div
+            class="distribution-segment cursor-pointer h-full flex items-center justify-center text-xs font-medium text-white"
+            style="width: ${percent}%; background-color: ${color};"
+            title="${group.name}: ${formatCurrency(group.totalSpend)} (${percent.toFixed(1)}%)"
+            onclick="scrollToPersona('${group.name}')"
+          >
+            ${percent > 10 ? percent.toFixed(0) + '%' : ''}
+          </div>
+        `;
+      }).join('');
+
+      // Render legend
+      const legendContainer = document.getElementById('distribution-legend');
+      legendContainer.innerHTML = sortedGroups.map(group => {
+        const percent = (group.totalSpend / totalSpend) * 100;
+        const color = getPersonaColor(group.name);
+        return `
+          <div class="flex items-center gap-2 cursor-pointer hover:opacity-80" onclick="scrollToPersona('${group.name}')">
+            <div class="w-3 h-3 rounded-sm" style="background-color: ${color};"></div>
+            <span class="text-sm text-slate-300">${group.name}</span>
+            <span class="text-sm text-slate-500">${percent.toFixed(1)}%</span>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderPersonaCards() {
+      const groups = groupAdsByPersona(DATA.ads);
+      const totalSpend = Object.values(groups).reduce((sum, g) => sum + g.totalSpend, 0);
+      const sortedGroups = Object.values(groups).sort((a, b) => b.totalSpend - a.totalSpend);
+
+      const container = document.getElementById('persona-cards');
+      container.innerHTML = sortedGroups.map((group, index) => {
+        const color = getPersonaColor(group.name);
+        const cpaStyle = getCpaColor(group.avgCpa, CONFIG.cpa_thresholds);
+        const spendPercent = ((group.totalSpend / totalSpend) * 100).toFixed(1);
+        const persona = CONFIG.personas.find(p => p.name === group.name);
+        const icon = persona?.icon || group.name.substring(0, 2).toUpperCase();
+
+        return `
+          <div class="persona-card glass-card rounded-xl overflow-hidden" id="persona-${group.name.replace(/\s+/g, '-').toLowerCase()}" data-persona="${group.name}">
+            <!-- Header (always visible) -->
+            <div
+              class="p-5 cursor-pointer flex items-center justify-between"
+              onclick="togglePersonaCard(this.parentElement)"
+            >
+              <div class="flex items-center gap-4">
+                <div
+                  class="w-12 h-12 rounded-xl flex items-center justify-center text-white font-bold text-sm"
+                  style="background-color: ${color};"
+                >
+                  ${icon}
+                </div>
+                <div>
+                  <h3 class="text-lg font-semibold text-white">${group.name}</h3>
+                  <p class="text-slate-400 text-sm">${group.ads.length} ads | ${spendPercent}% of spend</p>
+                </div>
+              </div>
+
+              <div class="flex items-center gap-6">
+                <div class="hidden sm:block text-right">
+                  <p class="text-slate-400 text-xs">Spend</p>
+                  <p class="text-white font-semibold">${formatCurrency(group.totalSpend)}</p>
+                </div>
+                <div class="hidden sm:block text-right">
+                  <p class="text-slate-400 text-xs">Conversions</p>
+                  <p class="text-white font-semibold">${formatNumber(group.totalConversions)}</p>
+                </div>
+                <div class="hidden md:block text-right">
+                  <p class="text-slate-400 text-xs">Avg CPA</p>
+                  <p class="font-semibold" style="color: ${cpaStyle.color};">${formatCurrency(group.avgCpa)}</p>
+                </div>
+                <div class="hidden md:block text-right">
+                  <p class="text-slate-400 text-xs">Avg CTR</p>
+                  <p class="text-white font-semibold">${formatPercent(group.avgCtr)}</p>
+                </div>
+                <svg class="chevron w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                </svg>
+              </div>
+            </div>
+
+            <!-- Expandable content -->
+            <div class="expand-content">
+              <div class="px-5 pb-5 border-t border-slate-700/50">
+
+                <!-- Charts Row -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-5">
+                  <!-- Spend Bar Chart -->
+                  <div class="bg-slate-800/30 rounded-xl p-4">
+                    <h4 class="text-sm font-medium text-slate-300 mb-4">Top Ads by Spend</h4>
+                    <div class="h-64 relative">
+                      <canvas id="spend-chart-${index}"></canvas>
+                    </div>
+                  </div>
+
+                  <!-- CPA vs CTR Scatter -->
+                  <div class="bg-slate-800/30 rounded-xl p-4">
+                    <h4 class="text-sm font-medium text-slate-300 mb-4">CPA vs CTR (bubble = spend)</h4>
+                    <div class="h-64 relative">
+                      <canvas id="scatter-chart-${index}"></canvas>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Performance Table -->
+                <div class="mt-6">
+                  <h4 class="text-sm font-medium text-slate-300 mb-3">All Ads</h4>
+                  <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                      <thead>
+                        <tr class="text-left text-slate-400 border-b border-slate-700">
+                          <th class="pb-3 pr-4">Ad ID</th>
+                          <th class="pb-3 pr-4">Spend</th>
+                          <th class="pb-3 pr-4">CPA</th>
+                          <th class="pb-3 pr-4">CTR</th>
+                          <th class="pb-3 pr-4">Conversions</th>
+                          <th class="pb-3 w-8"></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        ${group.ads.sort((a, b) => (b.metrics?.spend || 0) - (a.metrics?.spend || 0)).map(ad => {
+                          const adCpaStyle = getCpaColor(ad.metrics?.cost_per_conversion || 0, CONFIG.cpa_thresholds);
+                          const maxSpend = Math.max(...group.ads.map(a => a.metrics?.spend || 0));
+                          const spendWidth = ((ad.metrics?.spend || 0) / maxSpend) * 100;
+
+                          return `
+                            <tr class="border-b border-slate-800 hover:bg-slate-800/30">
+                              <td class="py-3 pr-4">
+                                <a
+                                  href="${getAdsManagerUrl(ad.ad_id)}"
+                                  target="_blank"
+                                  class="font-mono text-blue-400 hover:text-blue-300"
+                                >
+                                  ${ad.ad_id}
+                                </a>
+                                <p class="text-slate-500 text-xs truncate max-w-xs" title="${ad.ad_name}">${truncateText(ad.ad_name, 35)}</p>
+                              </td>
+                              <td class="py-3 pr-4">
+                                <div class="flex items-center gap-2">
+                                  <span class="text-white">${formatCurrency(ad.metrics?.spend || 0)}</span>
+                                  <div class="w-16 h-1.5 bg-slate-700 rounded-full overflow-hidden">
+                                    <div class="h-full rounded-full" style="width: ${spendWidth}%; background-color: ${color};"></div>
+                                  </div>
+                                </div>
+                              </td>
+                              <td class="py-3 pr-4">
+                                <span style="color: ${adCpaStyle.color};">${formatCurrency(ad.metrics?.cost_per_conversion || 0)}</span>
+                              </td>
+                              <td class="py-3 pr-4 text-white">${formatPercent(ad.metrics?.ctr || 0)}</td>
+                              <td class="py-3 pr-4 text-white">${formatNumber(ad.metrics?.conversions || 0)}</td>
+                              <td class="py-3">
+                                <button
+                                  class="text-slate-400 hover:text-white"
+                                  onclick="toggleAdDetails(this)"
+                                >
+                                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                  </svg>
+                                </button>
+                              </td>
+                            </tr>
+                            <tr class="ad-details hidden">
+                              <td colspan="6" class="py-4 px-4 bg-slate-800/20">
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                                  <div>
+                                    <p class="text-slate-400 mb-1">Strongest Signal</p>
+                                    <p class="text-slate-200">${ad.analysis?.strongest_signal || 'N/A'}</p>
+                                  </div>
+                                  <div>
+                                    <p class="text-slate-400 mb-1">Triggers Activated</p>
+                                    <div class="flex flex-wrap gap-1">
+                                      ${parseJsonField(ad.analysis?.triggers_activated).map(t => `
+                                        <span class="px-2 py-0.5 bg-slate-700 rounded text-xs text-slate-300">${t.trigger || t}</span>
+                                      `).join('')}
+                                    </div>
+                                  </div>
+                                  <div>
+                                    <p class="text-slate-400 mb-1">Messaging Themes</p>
+                                    <div class="flex flex-wrap gap-1">
+                                      ${parseJsonField(ad.analysis?.messaging_themes).map(t => `
+                                        <span class="px-2 py-0.5 bg-slate-700 rounded text-xs text-slate-300">${t.theme || t}</span>
+                                      `).join('')}
+                                    </div>
+                                  </div>
+                                  <div>
+                                    <p class="text-slate-400 mb-1">Voice/Tone Score</p>
+                                    <p class="text-slate-200">${ad.analysis?.voice_tone_score || 'N/A'}/10 - ${ad.analysis?.voice_tone_explanation || ''}</p>
+                                  </div>
+                                </div>
+                              </td>
+                            </tr>
+                          `;
+                        }).join('')}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderTriggerAnalysis() {
+      const triggers = extractTriggers(DATA.ads);
+      const maxSpend = Math.max(...triggers.map(t => t.totalSpend));
+
+      const container = document.getElementById('triggers-list');
+      container.innerHTML = triggers.map((trigger, index) => {
+        const cpaStyle = getCpaColor(trigger.avgCpa, CONFIG.cpa_thresholds);
+        const spendPercent = (trigger.totalSpend / maxSpend) * 100;
+
+        return `
+          <div class="bg-slate-800/30 rounded-lg overflow-hidden">
+            <div
+              class="p-4 cursor-pointer flex items-center justify-between"
+              onclick="toggleTriggerItem(this.parentElement)"
+            >
+              <div class="flex items-center gap-4 flex-1">
+                <div class="flex-1">
+                  <div class="flex items-center gap-2 mb-2">
+                    <h4 class="text-white font-medium">${trigger.name}</h4>
+                    <span class="px-2 py-0.5 bg-slate-700 rounded text-xs text-slate-300">${trigger.ads.length} ads</span>
+                  </div>
+                  <div class="w-full h-2 bg-slate-700 rounded-full overflow-hidden">
+                    <div
+                      class="h-full bg-gradient-to-r from-blue-500 to-purple-500 rounded-full"
+                      style="width: ${spendPercent}%;"
+                    ></div>
+                  </div>
+                </div>
+                <div class="text-right hidden sm:block">
+                  <p class="text-white font-semibold">${formatCurrency(trigger.totalSpend)}</p>
+                  <p class="text-slate-400 text-xs">${formatNumber(trigger.totalConversions)} conv</p>
+                </div>
+                <div class="text-right hidden sm:block">
+                  <p class="font-semibold" style="color: ${cpaStyle.color};">${formatCurrency(trigger.avgCpa)}</p>
+                  <p class="text-slate-400 text-xs">avg CPA</p>
+                </div>
+                <svg class="chevron w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                </svg>
+              </div>
+            </div>
+            <div class="expand-content">
+              <div class="px-4 pb-4 border-t border-slate-700/50">
+                <table class="w-full text-sm mt-3">
+                  <thead>
+                    <tr class="text-left text-slate-400 border-b border-slate-700">
+                      <th class="pb-2 pr-4">Ad ID</th>
+                      <th class="pb-2 pr-4">Spend</th>
+                      <th class="pb-2 pr-4">CPA</th>
+                      <th class="pb-2 pr-4">CTR</th>
+                      <th class="pb-2">Activation Moment</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${trigger.ads.sort((a, b) => (b.metrics?.spend || 0) - (a.metrics?.spend || 0)).slice(0, 10).map(ad => {
+                      const adCpaStyle = getCpaColor(ad.metrics?.cost_per_conversion || 0, CONFIG.cpa_thresholds);
+                      return `
+                        <tr class="border-b border-slate-800/50">
+                          <td class="py-2 pr-4">
+                            <a href="${getAdsManagerUrl(ad.ad_id)}" target="_blank" class="font-mono text-blue-400 hover:text-blue-300">${ad.ad_id}</a>
+                          </td>
+                          <td class="py-2 pr-4 text-white">${formatCurrency(ad.metrics?.spend || 0)}</td>
+                          <td class="py-2 pr-4" style="color: ${adCpaStyle.color};">${formatCurrency(ad.metrics?.cost_per_conversion || 0)}</td>
+                          <td class="py-2 pr-4 text-white">${formatPercent(ad.metrics?.ctr || 0)}</td>
+                          <td class="py-2 text-slate-300 text-xs">${ad.activationMoment || 'N/A'}</td>
+                        </tr>
+                      `;
+                    }).join('')}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderMessagingThemes() {
+      const themes = extractThemes(DATA.ads);
+      const maxSpend = Math.max(...themes.map(t => t.totalSpend));
+
+      const container = document.getElementById('themes-list');
+      container.innerHTML = themes.map((theme, index) => {
+        const cpaStyle = getCpaColor(theme.avgCpa, CONFIG.cpa_thresholds);
+        const spendPercent = (theme.totalSpend / maxSpend) * 100;
+
+        return `
+          <div class="bg-slate-800/30 rounded-lg overflow-hidden">
+            <div
+              class="p-4 cursor-pointer flex items-center justify-between"
+              onclick="toggleTriggerItem(this.parentElement)"
+            >
+              <div class="flex items-center gap-4 flex-1">
+                <div class="flex-1">
+                  <div class="flex items-center gap-2 mb-2">
+                    <h4 class="text-white font-medium">${theme.name}</h4>
+                    <span class="px-2 py-0.5 bg-slate-700 rounded text-xs text-slate-300">${theme.ads.length} ads</span>
+                  </div>
+                  <div class="w-full h-2 bg-slate-700 rounded-full overflow-hidden">
+                    <div
+                      class="h-full bg-gradient-to-r from-green-500 to-teal-500 rounded-full"
+                      style="width: ${spendPercent}%;"
+                    ></div>
+                  </div>
+                </div>
+                <div class="text-right hidden sm:block">
+                  <p class="text-white font-semibold">${formatCurrency(theme.totalSpend)}</p>
+                  <p class="text-slate-400 text-xs">${formatNumber(theme.totalConversions)} conv</p>
+                </div>
+                <div class="text-right hidden sm:block">
+                  <p class="font-semibold" style="color: ${cpaStyle.color};">${formatCurrency(theme.avgCpa)}</p>
+                  <p class="text-slate-400 text-xs">avg CPA</p>
+                </div>
+                <svg class="chevron w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                </svg>
+              </div>
+            </div>
+            <div class="expand-content">
+              <div class="px-4 pb-4 border-t border-slate-700/50">
+                <table class="w-full text-sm mt-3">
+                  <thead>
+                    <tr class="text-left text-slate-400 border-b border-slate-700">
+                      <th class="pb-2 pr-4">Ad ID</th>
+                      <th class="pb-2 pr-4">Spend</th>
+                      <th class="pb-2 pr-4">CPA</th>
+                      <th class="pb-2 pr-4">CTR</th>
+                      <th class="pb-2">Example in Ad</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${theme.ads.sort((a, b) => (b.metrics?.spend || 0) - (a.metrics?.spend || 0)).slice(0, 10).map(ad => {
+                      const adCpaStyle = getCpaColor(ad.metrics?.cost_per_conversion || 0, CONFIG.cpa_thresholds);
+                      return `
+                        <tr class="border-b border-slate-800/50">
+                          <td class="py-2 pr-4">
+                            <a href="${getAdsManagerUrl(ad.ad_id)}" target="_blank" class="font-mono text-blue-400 hover:text-blue-300">${ad.ad_id}</a>
+                          </td>
+                          <td class="py-2 pr-4 text-white">${formatCurrency(ad.metrics?.spend || 0)}</td>
+                          <td class="py-2 pr-4" style="color: ${adCpaStyle.color};">${formatCurrency(ad.metrics?.cost_per_conversion || 0)}</td>
+                          <td class="py-2 pr-4 text-white">${formatPercent(ad.metrics?.ctr || 0)}</td>
+                          <td class="py-2 text-slate-300 text-xs">${ad.exampleInAd || 'N/A'}</td>
+                        </tr>
+                      `;
+                    }).join('')}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // ============================================
+    // CHART RENDERING
+    // ============================================
+
+    function renderSinglePersonaCharts(index) {
+      const groups = groupAdsByPersona(DATA.ads);
+      const sortedGroups = Object.values(groups).sort((a, b) => b.totalSpend - a.totalSpend);
+      const group = sortedGroups[index];
+
+      if (!group) return;
+
+      const color = getPersonaColor(group.name);
+
+      // Spend Bar Chart
+      const spendCtx = document.getElementById(`spend-chart-${index}`);
+      if (spendCtx && !spendCtx.chart) {
+        const topAds = group.ads.sort((a, b) => (b.metrics?.spend || 0) - (a.metrics?.spend || 0)).slice(0, 10);
+
+        spendCtx.chart = new Chart(spendCtx, {
+          type: 'bar',
+          data: {
+            labels: topAds.map(ad => truncateText(ad.ad_name, 20)),
+            datasets: [{
+              data: topAds.map(ad => ad.metrics?.spend || 0),
+              backgroundColor: color + 'CC',
+              borderColor: color,
+              borderWidth: 1,
+              borderRadius: 4,
+            }]
+          },
+          options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                callbacks: {
+                  label: (ctx) => formatCurrency(ctx.raw)
+                }
+              }
+            },
+            scales: {
+              x: {
+                grid: { color: 'rgba(148, 163, 184, 0.1)' },
+                ticks: {
+                  color: '#94a3b8',
+                  callback: (val) => formatCurrency(val)
+                }
+              },
+              y: {
+                grid: { display: false },
+                ticks: { color: '#94a3b8', font: { size: 10 } }
+              }
+            }
+          }
+        });
+      }
+
+      // CPA vs CTR Scatter Chart
+      const scatterCtx = document.getElementById(`scatter-chart-${index}`);
+      if (scatterCtx && !scatterCtx.chart) {
+        const maxSpend = Math.max(...group.ads.map(a => a.metrics?.spend || 0));
+
+        scatterCtx.chart = new Chart(scatterCtx, {
+          type: 'bubble',
+          data: {
+            datasets: [{
+              data: group.ads.map(ad => ({
+                x: ad.metrics?.cost_per_conversion || 0,
+                y: (ad.metrics?.ctr || 0) * 100,
+                r: Math.max(4, Math.min(20, ((ad.metrics?.spend || 0) / maxSpend) * 20)),
+                ad: ad
+              })),
+              backgroundColor: group.ads.map(ad => {
+                const style = getCpaColor(ad.metrics?.cost_per_conversion || 0, CONFIG.cpa_thresholds);
+                return style.color + '99';
+              }),
+              borderColor: group.ads.map(ad => {
+                const style = getCpaColor(ad.metrics?.cost_per_conversion || 0, CONFIG.cpa_thresholds);
+                return style.color;
+              }),
+              borderWidth: 1
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                callbacks: {
+                  label: (ctx) => {
+                    const ad = ctx.raw.ad;
+                    return [
+                      `Ad: ${ad.ad_id}`,
+                      `CPA: ${formatCurrency(ctx.raw.x)}`,
+                      `CTR: ${ctx.raw.y.toFixed(2)}%`,
+                      `Spend: ${formatCurrency(ad.metrics?.spend || 0)}`
+                    ];
+                  }
+                }
+              }
+            },
+            scales: {
+              x: {
+                title: { display: true, text: 'CPA ($)', color: '#94a3b8' },
+                grid: { color: 'rgba(148, 163, 184, 0.1)' },
+                ticks: {
+                  color: '#94a3b8',
+                  callback: (val) => '$' + val
+                }
+              },
+              y: {
+                title: { display: true, text: 'CTR (%)', color: '#94a3b8' },
+                grid: { color: 'rgba(148, 163, 184, 0.1)' },
+                ticks: {
+                  color: '#94a3b8',
+                  callback: (val) => val.toFixed(2) + '%'
+                }
+              }
+            }
+          }
+        });
+      }
+    }
+
+    // ============================================
+    // INTERACTION HANDLERS
+    // ============================================
+
+    function togglePersonaCard(card) {
+      const content = card.querySelector('.expand-content');
+      const chevron = card.querySelector('.chevron');
+
+      content.classList.toggle('expanded');
+      chevron.classList.toggle('rotated');
+
+      // Initialize charts when first expanded
+      if (content.classList.contains('expanded') && !card.dataset.chartsInit) {
+        card.dataset.chartsInit = 'true';
+        setTimeout(() => {
+          const index = Array.from(document.querySelectorAll('.persona-card')).indexOf(card);
+          renderSinglePersonaCharts(index);
+        }, 100);
+      }
+    }
+
+    function toggleTriggerItem(item) {
+      const content = item.querySelector('.expand-content');
+      const chevron = item.querySelector('.chevron');
+
+      content.classList.toggle('expanded');
+      chevron.classList.toggle('rotated');
+    }
+
+    function toggleAdDetails(btn) {
+      const row = btn.closest('tr');
+      const detailsRow = row.nextElementSibling;
+
+      if (detailsRow && detailsRow.classList.contains('ad-details')) {
+        detailsRow.classList.toggle('hidden');
+        btn.querySelector('svg').classList.toggle('rotate-180');
+      }
+    }
+
+    function scrollToPersona(personaName) {
+      const slug = personaName.replace(/\s+/g, '-').toLowerCase();
+      const card = document.getElementById(`persona-${slug}`);
+      if (card) {
+        card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        // Auto-expand if not already expanded
+        const content = card.querySelector('.expand-content');
+        if (!content.classList.contains('expanded')) {
+          togglePersonaCard(card);
+        }
+      }
+    }
+
+    function switchTab(tab) {
+      const triggersBtn = document.getElementById('tab-triggers');
+      const themesBtn = document.getElementById('tab-themes');
+      const triggersContent = document.getElementById('triggers-content');
+      const themesContent = document.getElementById('themes-content');
+
+      if (tab === 'triggers') {
+        triggersBtn.classList.add('text-white', 'bg-slate-800/50', 'border-b-2', 'border-blue-500');
+        triggersBtn.classList.remove('text-slate-400');
+        themesBtn.classList.remove('text-white', 'bg-slate-800/50', 'border-b-2', 'border-blue-500');
+        themesBtn.classList.add('text-slate-400');
+        triggersContent.classList.remove('hidden');
+        themesContent.classList.add('hidden');
+      } else {
+        themesBtn.classList.add('text-white', 'bg-slate-800/50', 'border-b-2', 'border-blue-500');
+        themesBtn.classList.remove('text-slate-400');
+        triggersBtn.classList.remove('text-white', 'bg-slate-800/50', 'border-b-2', 'border-blue-500');
+        triggersBtn.classList.add('text-slate-400');
+        themesContent.classList.remove('hidden');
+        triggersContent.classList.add('hidden');
+      }
+    }
+
+    // ============================================
+    // INITIALIZATION
+    // ============================================
+
+    async function loadData() {
+      // Get client slug from URL parameter
+      const urlParams = new URLSearchParams(window.location.search);
+      const client = urlParams.get('client');
+
+      if (!client) {
+        throw new Error('No client specified. Use ?client=client-slug in the URL.');
+      }
+
+      // Fetch config and data from the data directory
+      const basePath = `./data/${client}/`;
+
+      try {
+        const [configResponse, dataResponse] = await Promise.all([
+          fetch(`${basePath}config.json`),
+          fetch(`${basePath}persona-data.json`)
+        ]);
+
+        if (!configResponse.ok) {
+          throw new Error(`Config not found for client: ${client}`);
+        }
+        if (!dataResponse.ok) {
+          throw new Error(`Data not found for client: ${client}`);
+        }
+
+        return {
+          config: await configResponse.json(),
+          data: await dataResponse.json()
+        };
+      } catch (error) {
+        console.error('Error loading data:', error);
+        throw error;
+      }
+    }
+
+    async function init() {
+      try {
+        const { config, data } = await loadData();
+        CONFIG = config;
+        DATA = normalizeData(data); // Normalize data to handle flat/nested structures
+
+        // Update page title
+        document.title = `${CONFIG.client_name} - Persona Performance Report`;
+
+        // Render all sections
+        renderHeader();
+        renderSummaryStats();
+        renderDistribution();
+        renderPersonaCards();
+        renderTriggerAnalysis();
+        renderMessagingThemes();
+
+        // Hide loading, show content
+        document.getElementById('loading').classList.add('hidden');
+        document.getElementById('content').classList.remove('hidden');
+
+      } catch (error) {
+        const urlParams = new URLSearchParams(window.location.search);
+        const client = urlParams.get('client');
+
+        document.getElementById('loading').innerHTML = `
+          <div class="text-center">
+            <div class="w-16 h-16 rounded-full bg-red-500/20 flex items-center justify-center mx-auto mb-4">
+              <svg class="w-8 h-8 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+              </svg>
+            </div>
+            <p class="text-red-400 font-medium mb-2">Failed to load report data</p>
+            <p class="text-slate-500 text-sm mb-4">${error.message}</p>
+            <p class="text-slate-600 text-xs">
+              ${client ? `Looking for: data/${client}/config.json and data/${client}/persona-data.json` : 'Add ?client=your-client-slug to the URL'}
+            </p>
+          </div>
+        `;
+      }
+    }
+
+    // Start the app
+    document.addEventListener('DOMContentLoaded', init);
+  </script>
+
+</body>
+</html>

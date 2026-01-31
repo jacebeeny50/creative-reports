@@ -1,0 +1,59 @@
+{
+  "client_name": "Lola Blankets",
+  "client_slug": "lola-blankets",
+  "ad_account_id": "10151991868843469",
+  "logo_url": "https://www.lolablankets.com/cdn/shop/files/logo.png",
+  "website": "https://www.lolablankets.com",
+  "brand_colors": {
+    "primary": "#4f8ff7",
+    "secondary": "#a78bfa",
+    "accent": "#34d399"
+  },
+  "cpa_thresholds": {
+    "good": 50,
+    "mid": 100
+  },
+  "default_date_range": "All Time",
+  "personas": [
+    {
+      "name": "Designer Parent",
+      "color": "#4f8ff7",
+      "icon": "DP"
+    },
+    {
+      "name": "Urban Luxe Millennial",
+      "color": "#a78bfa",
+      "icon": "UL"
+    },
+    {
+      "name": "Median-Income Mom",
+      "color": "#34d399",
+      "icon": "MM"
+    },
+    {
+      "name": "Suburban Sports Mom",
+      "color": "#f59e0b",
+      "icon": "SS"
+    },
+    {
+      "name": "Budget-Conscious Parent",
+      "color": "#ec4899",
+      "icon": "BP"
+    }
+  ],
+  "awareness_levels": [
+    "unaware",
+    "problem_aware",
+    "solution_aware",
+    "product_aware",
+    "most_aware"
+  ],
+  "categories": [
+    "ugc_style",
+    "testimonial_review",
+    "unboxing_reveal",
+    "offer_promotion",
+    "lifestyle_aesthetic",
+    "product_demo"
+  ]
+}
