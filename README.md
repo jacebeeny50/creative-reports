@@ -1,73 +1,48 @@
 # Creative Reports
 
-Persona performance reports for ad creative analysis.
+Ad creative intelligence reports.
 
-## View Reports
+## URL Structure
 
-Open with a client parameter:
 ```
-https://yourusername.github.io/creative-reports/?client=lola-blankets
+/                                    # Client selector
+/clients/lola-blankets/              # Client hub (all reports)
+/templates/persona-performance.html  # Report template (needs ?client=)
 ```
-
-## Local Development
-
-Run a local server and open in browser:
-
-```bash
-cd creative-reports
-python -m http.server 8000
-# Open: http://localhost:8000/?client=lola-blankets
-```
-
-## Adding a New Client
-
-1. Create folder: `data/your-client-slug/`
-2. Add two files:
-   - `config.json` - client settings, personas, thresholds
-   - `persona-data.json` - ad performance data
-3. Push to GitHub
-4. Access at `?client=your-client-slug`
-
-## Updating Client Data
-
-1. Replace the JSON files in `data/{client}/`
-2. Commit and push
-3. Changes live in ~60 seconds
 
 ## File Structure
 
 ```
 creative-reports/
-├── index.html                      # Report template
-├── data/
+├── index.html                       # Client selector
+├── templates/
+│   └── persona-performance.html     # Report templates
+├── clients/
 │   └── lola-blankets/
-│       ├── config.json             # Client config
-│       └── persona-data.json       # Ad data
+│       ├── index.html               # Client hub page
+│       ├── config.json              # Client config
+│       └── persona-data.json        # Ad performance data
 └── README.md
 ```
 
-## Config Schema
+## Adding a New Client
 
-```json
-{
-  "client_name": "Client Name",
-  "client_slug": "client-slug",
-  "ad_account_id": "123456789",
-  "logo_url": "https://...",
-  "cpa_thresholds": {
-    "good": 50,
-    "mid": 100
-  },
-  "personas": [
-    { "name": "Persona Name", "color": "#hex", "icon": "PN" }
-  ]
-}
-```
+1. Create folder: `clients/your-client-slug/`
+2. Copy from existing client:
+   - `index.html` - Update client name and links
+   - `config.json` - Client settings, personas, thresholds
+   - `persona-data.json` - Ad performance data
+3. Update root `index.html` to add client card
+4. Push to GitHub
 
-## GitHub Pages Setup
+## Updating Reports
 
-1. Push this repo to GitHub
-2. Go to Settings > Pages
-3. Source: Deploy from branch
-4. Branch: main / root
-5. Save
+**Update template design:**
+1. Edit `templates/persona-performance.html`
+2. Commit and push
+
+**Update client data:**
+1. Replace JSON files in `clients/{client}/`
+2. Commit and push
+
+Changes live in ~60 seconds.
